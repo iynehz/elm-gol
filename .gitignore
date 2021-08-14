@@ -5,4 +5,3 @@ repl-temp-*
 
 node_modules/
 .vscode/
-index.html

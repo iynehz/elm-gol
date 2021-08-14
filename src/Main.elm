@@ -7,29 +7,27 @@ import Svg.Events
 import Html exposing (Html)
 import Html.Events
 import Html.Attributes
-import Random
 import Time
+import List
+import Json.Decode
 import Debug
+import Array
 import Array2D
+
 import Bootstrap.CDN
 import Bootstrap.Button
 
-
-type alias Grid = Array2D.Array2D Bool
-type alias Size = { width: Int, height: Int }
-type alias Position = { x: Int, y: Int }
-type alias Model = 
-    { grid: Grid
-    , state: State
-    }
+import GameOfLife.Grid as Grid
+import GameOfLife.Pattern as Pattern
+import Browser.Navigation exposing (back)
 
 -- Constants
 
-gridSize : Size
-gridSize = Size 100 60 
+gridSize : Grid.Size
+gridSize = Grid.Size 80 60 
 
-cellSize : Size
-cellSize = Size 10 10
+cellSize : Int
+cellSize = 10
 
 gridColor : String
 gridColor = "grey"
@@ -42,36 +40,31 @@ cellColor = "black"
 
 -- tick period in mS
 tickPeriod : Float
-tickPeriod = 200
+tickPeriod = 100
+
+type alias Model = 
+    { grid: Grid.Grid
+    , state: State
+    }
 
 type Msg
     = Tick Time.Posix
-    | RandomCell Position
     | Start
     | Stop
-    | GridClicked
+    | Reset
+    | Clear
+    | GridClicked Grid.Position
 
 type State
     = Active
     | Inactive
 
-generateGrid : Size -> Grid
-generateGrid size = Array2D.repeat size.width size.height False
-
-randomPosition : Random.Generator Position 
-randomPosition = 
-    let
-        randomPair = Random.pair (Random.int 0 (gridSize.width - 1)) (Random.int 0 (gridSize.height - 1))
-    in
-        Random.map (\p -> { x = Tuple.first p, y = Tuple.second p }) randomPair
-
--- randomGrid : Int -> Cmd Msg
--- randomGrid n = Random.generate RandomCell randomPosition
-
-
 init : () -> (Model, Cmd Msg)
-init _ =
-    ( { grid = generateGrid gridSize
+init _ = initGame ()
+
+initGame : () -> (Model, Cmd Msg)
+initGame _ =
+    ( { grid = Pattern.addPattern Pattern.gliderGun (Grid.initialize gridSize)
       , state = Inactive
       }
     , Cmd.none
@@ -82,26 +75,16 @@ update msg model =
     case msg of
         Tick time -> 
             let
-                log = Debug.log "event:" "Tick"
                 grid = model.grid
                 newModel =
                     { model
-                    | grid = if model.state == Active then evolve grid else grid }
+                    | grid = if model.state == Active then Grid.evolve grid else grid }
             in
                 ( newModel
                 , Cmd.none
                 )
-        RandomCell pos -> 
-            let
-                newGrid = Array2D.set pos.x pos.y True model.grid
-                newModel = 
-                    { model
-                    | grid = newGrid }
-            in
-              (newModel, Cmd.none)
         Start -> 
             let
-                _ = Debug.log "event:" "Start"
                 newModel =
                     { model
                     | state = Active }
@@ -109,28 +92,58 @@ update msg model =
                 (newModel, Cmd.none)
         Stop -> 
             let
-                _ = Debug.log "event:" "Stop"
                 newModel =
                     { model
-                    | state = Active }
+                    | state = Inactive }
             in
                 (newModel, Cmd.none)
-        GridClicked -> 
-            (model, Cmd.none)
+        Reset -> initGame ()
+        Clear -> 
+            let
+                newModel =
+                    { model
+                    | grid = Grid.clear model.grid
+                    , state = Inactive }
+            in
+                (newModel, Cmd.none)
+        GridClicked pos -> 
+            let 
+                cell = Maybe.withDefault False (Array2D.get pos.x pos.y grid)
+                grid = model.grid
+                newModel =
+                    { model
+                    | grid = if model.state == Inactive then Grid.set pos (not cell) grid else grid }
+            in
+                (newModel, Cmd.none)
 
 view : Model -> Html Msg
 view model = 
     Html.div []
         [ Bootstrap.CDN.stylesheet
+        , Html.h1 [] [ text "Conway's Game of Life" ]
         , Html.div [] [ renderGrid model ]
         , Html.div [ Html.Attributes.style "margin-top" "10px" ]
             [ Bootstrap.Button.button
                 [ Bootstrap.Button.onClick Start
-                , Bootstrap.Button.primary ] [ text "Start" ]
+                , Bootstrap.Button.disabled (model.state == Active)
+                , if model.state == Inactive then Bootstrap.Button.primary else Bootstrap.Button.secondary ]
+                [ text "Start" ]
             , Html.text " "
             , Bootstrap.Button.button
                 [ Bootstrap.Button.onClick Stop
-                , Bootstrap.Button.secondary ] [ text "Stop" ]
+                , Bootstrap.Button.disabled (model.state == Inactive)
+                , if model.state == Active then Bootstrap.Button.primary else Bootstrap.Button.secondary ]
+                [ text "Stop" ]
+            , Html.text " "
+            , Bootstrap.Button.button
+                [ Bootstrap.Button.onClick Clear
+                , Bootstrap.Button.secondary ]
+                [ text "Clear" ]
+            , Html.text " "
+            , Bootstrap.Button.button
+                [ Bootstrap.Button.onClick Reset
+                , Bootstrap.Button.secondary ]
+                [ text "Reset" ]
             ]
         ]
 
@@ -140,54 +153,55 @@ subscriptions model = Time.every tickPeriod Tick
 renderGrid : Model -> Html Msg
 renderGrid model = 
     let
-        canvasWidth = gridSize.width * cellSize.width
-        canvasHeight = gridSize.height * cellSize.height
+        canvasWidth = gridSize.width * cellSize
+        canvasHeight = gridSize.height * cellSize
+        cellsList = Grid.toIndexedList model.grid
     in
         svg
             [ width (String.fromInt canvasWidth)
             , height (String.fromInt canvasHeight)
-            , viewBox (String.join " " (List.map String.fromInt [0, 0, canvasWidth, canvasHeight]))
-            , Svg.Events.onClick GridClicked
+            , viewBox (String.join " " <| List.map String.fromInt [0, 0, canvasWidth, canvasHeight])
             ]
             (
-                rect
-                [ width (String.fromInt canvasWidth)
-                , height (String.fromInt canvasHeight)
-                , stroke gridColor
-                , fill backgroundColor
-                ] []
-                :: (List.map (
+                [
+                    rect
+                    [ width (String.fromInt canvasWidth)
+                    , height (String.fromInt canvasHeight)
+                    , stroke gridColor
+                    , fill backgroundColor
+                    ] []
+                ]
+                ++ (List.map (\x -> renderCell (Tuple.first x) (Tuple.second x)) cellsList)
+                ++ (List.map (
                     \x -> line
-                    [ x1 (String.fromInt (x * cellSize.width))
-                    , x2 (String.fromInt (x * cellSize.width))
+                    [ x1 (String.fromInt (x * cellSize))
+                    , x2 (String.fromInt (x * cellSize))
                     , y1 "0"
                     , y2 (String.fromInt canvasHeight)
                     , stroke gridColor
                     ] [])
-                    (List.range 1 (gridSize.width - 1)))
+                    (List.range 0 gridSize.width))
                 ++ (List.map (
                     \x -> line
-                    [ y1 (String.fromInt (x * cellSize.height))
-                    , y2 (String.fromInt (x * cellSize.height))
+                    [ y1 (String.fromInt (x * cellSize))
+                    , y2 (String.fromInt (x * cellSize))
                     , x1 "0"
                     , x2 (String.fromInt canvasWidth)
                     , stroke gridColor
                     ] [])
-                    (List.range 1 (gridSize.height - 1)))
+                    (List.range 0 gridSize.height))
             )
 
-renderCell : Position -> Svg Msg
-renderCell pos =
-  rect [ width (String.fromInt cellSize.width)
-       , height (String.fromInt cellSize.height)
-       , x (String.fromInt (pos.x * cellSize.width))
-       , y (String.fromInt (pos.y * cellSize.height))
-       , fill cellColor
-       ] []
-
-evolve : Grid -> Grid
-evolve grid =
-    grid
+renderCell : Grid.Position -> Bool -> Svg Msg
+renderCell pos isLive =
+  rect [ width (String.fromInt cellSize)
+       , height (String.fromInt cellSize)
+       , x (String.fromInt (pos.x * cellSize))
+       , y (String.fromInt (pos.y * cellSize))
+       , if isLive then fill cellColor else fill backgroundColor
+       , Svg.Events.onClick (GridClicked (Grid.Position pos.x pos.y))
+       ]
+       []
 
 main = Browser.element
     { init = init
