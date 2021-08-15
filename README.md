@@ -1,3 +1,5 @@
 # Conway's Game of Life in Elm
 
-Elm 0.19.1
+This project uses Elm 0.19.1
+
+Play it [here](https://stphnlyd.github.io/elm-gol/)
