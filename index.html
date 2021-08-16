@@ -5471,11 +5471,11 @@ var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $author$project$Main$initGame = function (_v0) {
 	return _Utils_Tuple2(
 		{
-			r: A2(
+			m: A2(
 				$author$project$GameOfLife$Pattern$addPattern,
 				$author$project$GameOfLife$Pattern$gliderGun,
 				$author$project$GameOfLife$Grid$initialize($author$project$Main$gridSize)),
-			m: 1
+			l: 1
 		},
 		$elm$core$Platform$Cmd$none);
 };
@@ -6040,36 +6040,43 @@ var $author$project$Main$update = F2(
 		switch (msg.$) {
 			case 0:
 				var time = msg.a;
-				var grid = model.r;
+				var grid = model.m;
 				var newModel = _Utils_update(
 					model,
 					{
-						r: (!model.m) ? $author$project$GameOfLife$Grid$evolve(grid) : grid
+						m: (!model.l) ? $author$project$GameOfLife$Grid$evolve(grid) : grid
 					});
 				return _Utils_Tuple2(newModel, $elm$core$Platform$Cmd$none);
 			case 1:
 				var newModel = _Utils_update(
 					model,
-					{m: 0});
+					{l: 0});
 				return _Utils_Tuple2(newModel, $elm$core$Platform$Cmd$none);
 			case 2:
 				var newModel = _Utils_update(
 					model,
-					{m: 1});
+					{l: 1});
 				return _Utils_Tuple2(newModel, $elm$core$Platform$Cmd$none);
 			case 3:
-				return $author$project$Main$initGame(0);
-			case 4:
 				var newModel = _Utils_update(
 					model,
 					{
-						r: $author$project$GameOfLife$Grid$clear(model.r),
-						m: 1
+						m: $author$project$GameOfLife$Grid$evolve(model.m)
+					});
+				return _Utils_Tuple2(newModel, $elm$core$Platform$Cmd$none);
+			case 4:
+				return $author$project$Main$initGame(0);
+			case 5:
+				var newModel = _Utils_update(
+					model,
+					{
+						m: $author$project$GameOfLife$Grid$clear(model.m),
+						l: 1
 					});
 				return _Utils_Tuple2(newModel, $elm$core$Platform$Cmd$none);
 			default:
 				var pos = msg.a;
-				var grid = model.r;
+				var grid = model.m;
 				var cell = A2(
 					$elm$core$Maybe$withDefault,
 					false,
@@ -6077,14 +6084,15 @@ var $author$project$Main$update = F2(
 				var newModel = _Utils_update(
 					model,
 					{
-						r: (model.m === 1) ? A3($author$project$GameOfLife$Grid$set, pos, !cell, grid) : grid
+						m: (model.l === 1) ? A3($author$project$GameOfLife$Grid$set, pos, !cell, grid) : grid
 					});
 				return _Utils_Tuple2(newModel, $elm$core$Platform$Cmd$none);
 		}
 	});
-var $author$project$Main$Clear = {$: 4};
-var $author$project$Main$Reset = {$: 3};
+var $author$project$Main$Clear = {$: 5};
+var $author$project$Main$Reset = {$: 4};
 var $author$project$Main$Start = {$: 1};
+var $author$project$Main$Step = {$: 3};
 var $author$project$Main$Stop = {$: 2};
 var $elm$html$Html$button = _VirtualDom_node('button');
 var $rundis$elm_bootstrap$Bootstrap$Internal$Button$applyModifier = F2(
@@ -6294,12 +6302,14 @@ var $rundis$elm_bootstrap$Bootstrap$Button$primary = $rundis$elm_bootstrap$Boots
 var $author$project$Main$backgroundColor = 'white';
 var $author$project$Main$cellSize = 10;
 var $elm$svg$Svg$Attributes$fill = _VirtualDom_attribute('fill');
-var $author$project$Main$gridColor = 'grey';
+var $author$project$Main$gridColor = 'lightgrey';
+var $author$project$Main$gridColorMajor = 'grey';
 var $elm$svg$Svg$Attributes$height = _VirtualDom_attribute('height');
 var $elm$svg$Svg$trustedNode = _VirtualDom_nodeNS('http://www.w3.org/2000/svg');
+var $elm$svg$Svg$line = $elm$svg$Svg$trustedNode('line');
 var $elm$svg$Svg$rect = $elm$svg$Svg$trustedNode('rect');
 var $author$project$Main$GridClicked = function (a) {
-	return {$: 5, a: a};
+	return {$: 6, a: a};
 };
 var $author$project$Main$cellColor = 'black';
 var $elm$virtual_dom$VirtualDom$Normal = function (a) {
@@ -6368,8 +6378,12 @@ var $author$project$GameOfLife$Grid$toIndexedList = function (grid) {
 		$elm$core$Array$toList(cellsArray.da));
 };
 var $elm$svg$Svg$Attributes$viewBox = _VirtualDom_attribute('viewBox');
+var $elm$svg$Svg$Attributes$x1 = _VirtualDom_attribute('x1');
+var $elm$svg$Svg$Attributes$x2 = _VirtualDom_attribute('x2');
+var $elm$svg$Svg$Attributes$y1 = _VirtualDom_attribute('y1');
+var $elm$svg$Svg$Attributes$y2 = _VirtualDom_attribute('y2');
 var $author$project$Main$renderGrid = function (model) {
-	var cellsList = $author$project$GameOfLife$Grid$toIndexedList(model.r);
+	var cellsList = $author$project$GameOfLife$Grid$toIndexedList(model.m);
 	var canvasWidth = $author$project$Main$gridSize.c3 * $author$project$Main$cellSize;
 	var canvasHeight = $author$project$Main$gridSize.ct * $author$project$Main$cellSize;
 	return A2(
@@ -6406,12 +6420,52 @@ var $author$project$Main$renderGrid = function (model) {
 						]),
 					_List_Nil)
 				]),
-			A2(
-				$elm$core$List$map,
-				function (x) {
-					return A2($author$project$Main$renderCell, x.a, x.b);
-				},
-				cellsList)));
+			_Utils_ap(
+				A2(
+					$elm$core$List$map,
+					function (x) {
+						return A2($author$project$Main$renderCell, x.a, x.b);
+					},
+					cellsList),
+				_Utils_ap(
+					A2(
+						$elm$core$List$map,
+						function (x) {
+							return A2(
+								$elm$svg$Svg$line,
+								_List_fromArray(
+									[
+										$elm$svg$Svg$Attributes$x1(
+										$elm$core$String$fromInt((x * 10) * $author$project$Main$cellSize)),
+										$elm$svg$Svg$Attributes$x2(
+										$elm$core$String$fromInt((x * 10) * $author$project$Main$cellSize)),
+										$elm$svg$Svg$Attributes$y1('0'),
+										$elm$svg$Svg$Attributes$y2(
+										$elm$core$String$fromInt(canvasHeight)),
+										$elm$svg$Svg$Attributes$stroke($author$project$Main$gridColorMajor)
+									]),
+								_List_Nil);
+						},
+						A2($elm$core$List$range, 0, ($author$project$Main$gridSize.c3 / 10) | 0)),
+					A2(
+						$elm$core$List$map,
+						function (y) {
+							return A2(
+								$elm$svg$Svg$line,
+								_List_fromArray(
+									[
+										$elm$svg$Svg$Attributes$y1(
+										$elm$core$String$fromInt((y * 10) * $author$project$Main$cellSize)),
+										$elm$svg$Svg$Attributes$y2(
+										$elm$core$String$fromInt((y * 10) * $author$project$Main$cellSize)),
+										$elm$svg$Svg$Attributes$x1('0'),
+										$elm$svg$Svg$Attributes$x2(
+										$elm$core$String$fromInt(canvasWidth)),
+										$elm$svg$Svg$Attributes$stroke($author$project$Main$gridColorMajor)
+									]),
+								_List_Nil);
+						},
+						A2($elm$core$List$range, 0, ($author$project$Main$gridSize.ct / 10) | 0))))));
 };
 var $rundis$elm_bootstrap$Bootstrap$Internal$Button$Secondary = 1;
 var $rundis$elm_bootstrap$Bootstrap$Button$secondary = $rundis$elm_bootstrap$Bootstrap$Internal$Button$Coloring(
@@ -6476,8 +6530,8 @@ var $author$project$Main$view = function (model) {
 						_List_fromArray(
 							[
 								$rundis$elm_bootstrap$Bootstrap$Button$onClick($author$project$Main$Start),
-								$rundis$elm_bootstrap$Bootstrap$Button$disabled(!model.m),
-								(model.m === 1) ? $rundis$elm_bootstrap$Bootstrap$Button$primary : $rundis$elm_bootstrap$Bootstrap$Button$secondary
+								$rundis$elm_bootstrap$Bootstrap$Button$disabled(!model.l),
+								(model.l === 1) ? $rundis$elm_bootstrap$Bootstrap$Button$primary : $rundis$elm_bootstrap$Bootstrap$Button$secondary
 							]),
 						_List_fromArray(
 							[
@@ -6489,12 +6543,25 @@ var $author$project$Main$view = function (model) {
 						_List_fromArray(
 							[
 								$rundis$elm_bootstrap$Bootstrap$Button$onClick($author$project$Main$Stop),
-								$rundis$elm_bootstrap$Bootstrap$Button$disabled(model.m === 1),
-								(!model.m) ? $rundis$elm_bootstrap$Bootstrap$Button$primary : $rundis$elm_bootstrap$Bootstrap$Button$secondary
+								$rundis$elm_bootstrap$Bootstrap$Button$disabled(model.l === 1),
+								(!model.l) ? $rundis$elm_bootstrap$Bootstrap$Button$primary : $rundis$elm_bootstrap$Bootstrap$Button$secondary
 							]),
 						_List_fromArray(
 							[
 								$elm$svg$Svg$text('Stop')
+							])),
+						$elm$html$Html$text(' '),
+						A2(
+						$rundis$elm_bootstrap$Bootstrap$Button$button,
+						_List_fromArray(
+							[
+								$rundis$elm_bootstrap$Bootstrap$Button$onClick($author$project$Main$Step),
+								$rundis$elm_bootstrap$Bootstrap$Button$secondary,
+								$rundis$elm_bootstrap$Bootstrap$Button$disabled(!model.l)
+							]),
+						_List_fromArray(
+							[
+								$elm$svg$Svg$text('Step')
 							])),
 						$elm$html$Html$text(' '),
 						A2(

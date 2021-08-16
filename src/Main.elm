@@ -31,6 +31,11 @@ cellSize =
 
 gridColor : String
 gridColor =
+    "lightgrey"
+
+
+gridColorMajor : String
+gridColorMajor =
     "grey"
 
 
@@ -59,6 +64,7 @@ type Msg
     = Tick Time.Posix
     | Start
     | Stop
+    | Step
     | Reset
     | Clear
     | GridClicked Grid.Position
@@ -122,6 +128,17 @@ update msg model =
                     }
             in
             ( newModel, Cmd.none )
+
+        Step ->
+            let
+                newModel =
+                    { model
+                        | grid = Grid.evolve model.grid
+                    }
+            in
+            ( newModel
+            , Cmd.none
+            )
 
         Reset ->
             initGame ()
@@ -187,6 +204,13 @@ view model =
                 [ text "Stop" ]
             , Html.text " "
             , Bootstrap.Button.button
+                [ Bootstrap.Button.onClick Step
+                , Bootstrap.Button.secondary
+                , Bootstrap.Button.disabled (model.state == Active)
+                ]
+                [ text "Step" ]
+            , Html.text " "
+            , Bootstrap.Button.button
                 [ Bootstrap.Button.onClick Clear
                 , Bootstrap.Button.secondary
                 ]
@@ -232,6 +256,30 @@ renderGrid model =
             []
          ]
             ++ List.map (\x -> renderCell (Tuple.first x) (Tuple.second x)) cellsList
+            ++ List.map
+                (\x ->
+                    line
+                        [ x1 (String.fromInt (x * 10 * cellSize))
+                        , x2 (String.fromInt (x * 10 * cellSize))
+                        , y1 "0"
+                        , y2 (String.fromInt canvasHeight)
+                        , stroke gridColorMajor
+                        ]
+                        []
+                )
+                (List.range 0 (gridSize.width // 10))
+            ++ List.map
+                (\y ->
+                    line
+                        [ y1 (String.fromInt (y * 10 * cellSize))
+                        , y2 (String.fromInt (y * 10 * cellSize))
+                        , x1 "0"
+                        , x2 (String.fromInt canvasWidth)
+                        , stroke gridColorMajor
+                        ]
+                        []
+                )
+                (List.range 0 (gridSize.height // 10))
         )
 
 
