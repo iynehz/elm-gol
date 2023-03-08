@@ -2,4 +2,4 @@
 
 This project uses Elm 0.19.1
 
-Play it [here](https://stphnlyd.github.io/elm-gol/)
+Play it [here](https://iynehz.github.io/elm-gol/)
